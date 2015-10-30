@@ -12,9 +12,12 @@ trait DbOperations { self: EmbeddedDatabaseService =>
       node
   }
 
-  def findEntry(entryId: String): Option[Node] = {
+  def isProcessed(username: String, entryId: String): Option[Node] = {
     try {
-      Option(db.findNode(Labels.ENTRY, "id", entryId))
+      val user = findUser(username)
+      val node: Node = db.findNode(Labels.ENTRY, "id", entryId)
+      node.getRelationships(RelTypes.FAVORITED)
+
     } catch {
       case e: Exception => None
     }

@@ -34,16 +34,17 @@ class UserScannerActor extends Actor with EmbeddedDatabaseService with DbOperati
   val entryWorkers = context.actorOf(EntryWorkerActor.props.withRouter(RoundRobinPool(5)))
 
   override def receive: Receive = {
-    case ScanUser(u, page: Int) => UserScannerActor.fetchUrl(s"https://eksisozluk.com/basliklar/istatistik/${u}/favori-entryleri?p=${page}") match {
+    case ScanUser(username, page: Int) => UserScannerActor.fetchUrl(s"https://eksisozluk.com/basliklar/istatistik/${username}/favori-entryleri?p=${page}") match {
 
       case Success(entryList) =>
 
         def processEntries():Boolean =  {
+
           for(entryId <- entryList.data) {
             withTx {
-              findEntry(entryId) match {
+              isProcessed(username, entryId) match {
                 case Some(x) => return false
-                case None => entryWorkers ! TrackFavorite(u, entryId)
+                case None => entryWorkers ! TrackFavorite(username, entryId)
               }
             }
           }
@@ -52,7 +53,7 @@ class UserScannerActor extends Actor with EmbeddedDatabaseService with DbOperati
         }
 
         if (processEntries())
-          self ! ScanUser(u, page+1)
+          self ! ScanUser(username, page+1)
 
       case Failure(e) => print("failed " + e.getMessage)
     }
