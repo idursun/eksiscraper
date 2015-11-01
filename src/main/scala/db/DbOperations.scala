@@ -1,6 +1,8 @@
 package db
 
-import org.neo4j.graphdb.Node
+import scala.collection.JavaConversions._
+
+import org.neo4j.graphdb.{Relationship, Node}
 
 trait DbOperations { self: EmbeddedDatabaseService =>
 
@@ -12,14 +14,19 @@ trait DbOperations { self: EmbeddedDatabaseService =>
       node
   }
 
-  def isProcessed(username: String, entryId: String): Option[Node] = {
+  def markFavorited(user: Node, entryId: String): Boolean = {
     try {
-      val user = findUser(username)
-      val node: Node = db.findNode(Labels.ENTRY, "id", entryId)
-      node.getRelationships(RelTypes.FAVORITED)
-
+      val node: Node = Option(db.findNode(Labels.ENTRY, "id", entryId)) getOrElse createEntryNode(entryId)
+      val relationships = node.getRelationships(RelTypes.FAVORITED).toList
+      for (x: Relationship <- relationships) {
+        if (x.getEndNode.equals(user)) {
+          false
+        }
+      }
+      user.createRelationshipTo(node, RelTypes.FAVORITED)
+      true
     } catch {
-      case e: Exception => None
+      case e: Exception => true
     }
   }
 
@@ -32,6 +39,7 @@ trait DbOperations { self: EmbeddedDatabaseService =>
   }
 
   def createEntryNode(entryId: String): Node = {
+    println(s"creating entry node ${entryId}")
     val entryNode: Node = db.createNode(Labels.ENTRY)
     entryNode.setProperty("id", entryId)
     entryNode

@@ -19,9 +19,9 @@ class EntryWorkerActor extends Actor with EmbeddedDatabaseService with DbOperati
 
     case TrackFavorite(username, entryId) =>
       lazy val user = findUser(username)
-      val entryNode = findEntry(entryId) match {
+      findEntry(entryId) match {
         case Some(x) =>
-          user.createRelationshipTo(entryNode, RelTypes.FAVORITED)
+          user.createRelationshipTo(x, RelTypes.FAVORITED)
           println(s"creating relationship for ${entryId}")
         case None =>
           val entryNode = createEntryNode(entryId)

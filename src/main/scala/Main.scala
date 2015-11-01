@@ -1,12 +1,24 @@
+import java.util
+
 import actors.UserScannerActor
 import actors.UserScannerActor.ScanUser
 import akka.actor.ActorSystem
 import db.EmbeddedDatabaseService
+import scala.concurrent.duration._
+
 
 case class ScrapedData(data: String)
 case class EntryList(data: Array[String])
 
 object Main extends App with EmbeddedDatabaseService {
+
+//  withTx {
+//    val q = db.execute("MATCH (n: {'username': 'ssg'})")
+//    while(q.hasNext) {
+//      val next: util.Map[String, AnyRef] = q.next()
+//      println(s"next ${next}")
+//    }
+//  }
 
 //  withTx({
 //    var node = db.findNode(Labels.USER, "username", "ssg")
@@ -39,9 +51,11 @@ object Main extends App with EmbeddedDatabaseService {
 
 
   lazy val system = ActorSystem("main")
+  import system.dispatcher
+
   val actor = system.actorOf(UserScannerActor.props)
 
-  actor ! ScanUser("ssg")
+  system.scheduler.schedule(0.milliseconds, 5.minutes, actor, ScanUser("thex"))
 
   system.registerOnTermination({
     db.shutdown()

@@ -2,16 +2,17 @@ package actors
 
 import java.net.URL
 
-import actors.EntryWorkerActor.TrackFavorite
 import actors.UserScannerActor.ScanUser
 import akka.actor.{Actor, ActorLogging, Props}
 import akka.routing.RoundRobinPool
 import db.{DbOperations, EmbeddedDatabaseService}
 import org.jsoup.Jsoup
+import org.neo4j.graphdb.Node
 
 import scala.util.{Failure, Success, Try}
 
 sealed trait Command
+
 case object Initialize extends Command
 
 object UserScannerActor {
@@ -29,34 +30,41 @@ object UserScannerActor {
 }
 
 class UserScannerActor extends Actor with EmbeddedDatabaseService with DbOperations with ActorLogging {
+
   import utils.UrlConverters._
 
   val entryWorkers = context.actorOf(EntryWorkerActor.props.withRouter(RoundRobinPool(5)))
 
   override def receive: Receive = {
-    case ScanUser(username, page: Int) => UserScannerActor.fetchUrl(s"https://eksisozluk.com/basliklar/istatistik/${username}/favori-entryleri?p=${page}") match {
+    case ScanUser(username, page: Int) => {
+      UserScannerActor.fetchUrl(s"https://eksisozluk.com/basliklar/istatistik/${username}/favori-entryleri?p=${page}") match {
 
-      case Success(entryList) =>
-
-        def processEntries():Boolean =  {
-
-          for(entryId <- entryList.data) {
-            withTx {
-              isProcessed(username, entryId) match {
-                case Some(x) => return false
-                case None => entryWorkers ! TrackFavorite(username, entryId)
+        case Success(entryList) =>
+          println(s"entry count user ${username} for ${page} is ${entryList.data.length}")
+          def processEntries(user: Node, items: Array[String]): Boolean = {
+            for (entryId <- items) {
+              if (!markFavorited(user, entryId)) {
+                return false
               }
+              println(s"${username} favorited ${entryId}")
             }
+            entryList.data.length > 1
           }
 
-          entryList.data.length > 0
-        }
+          var processed: Boolean = false
+          withTx {
+            val user: Node = findUser(username)
+            processed = processEntries(user, entryList.data)
+          }
 
-        if (processEntries())
-          self ! ScanUser(username, page+1)
+          if (processed)
+            self ! ScanUser(username, page+1)
 
-      case Failure(e) => print("failed " + e.getMessage)
+        case Failure(e) => print(s"failed ${e.getMessage}")
+      }
+
     }
     case Initialize => print("initialized")
   }
+
 }
