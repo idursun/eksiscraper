@@ -1,10 +1,9 @@
 package db
 
+import org.neo4j.graphdb.Node
+
 import scala.collection.JavaConversions._
-
-import org.neo4j.graphdb.{Relationship, Node}
-
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 
 trait DbOperations { self: EmbeddedDatabaseService =>
 

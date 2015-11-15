@@ -51,19 +51,19 @@ object Main extends App with EmbeddedDatabaseService with DbOperations {
 
   lazy val system = ActorSystem("main")
   import system.dispatcher
-  val actor = system.actorOf(UserScannerActor.props("sesshenn"))
+  val actor = system.actorOf(UserScannerActor.props("thex"))
 
   system.scheduler.schedule(0.milliseconds, 5.minutes, actor, ScanPage(1))
 
-//  system.registerOnTermination({
-////    db.shutdown()
-//  })
+  system.registerOnTermination({
+    database.shutdown()
+  })
 
   io.StdIn.readLine()
   println("shutting down system")
   Await.ready(system.terminate(), Duration.Inf)
-  println("shutting down db")
-  db.ds.shutdown()
+//  println("shutting down db")
+//  db.ds.shutdown()
 
 
 

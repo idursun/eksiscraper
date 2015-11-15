@@ -39,8 +39,9 @@ class UserScannerActor(val username: String) extends Actor with EmbeddedDatabase
           lazy val userNode = findUser(username) getOrElse createUser(username)
           var next = false
           withTx {
-            for ( entry <- entryList.take(1) if !entry.isEmpty && !isFavoritedBefore(username, entry) ) {
+            for ( entry <- entryList if !entry.isEmpty && !isFavoritedBefore(username, entry) ) {
               markFavorited(userNode, entry)
+              self ! FetchEntryInfo(entry)
               next = true
             }
           }
