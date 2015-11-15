@@ -14,6 +14,7 @@ trait EmbeddedDatabaseService {
     } catch {
       case ex:Exception => tx.failure()
     } finally  {
+      println("closing transaction")
       tx.close()
     }
   }

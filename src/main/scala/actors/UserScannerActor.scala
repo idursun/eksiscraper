@@ -24,8 +24,8 @@ object UserScannerActor {
 
 class UserScannerActor(val username: String) extends Actor with EmbeddedDatabaseService with DbOperations with ActorLogging {
 
-  import utils.UrlConverters._
   import db.ds
+  import utils.UrlConverters._
 
   def fetchFavorites(url: URL): Try[Array[String]] = Try(Jsoup.parse(url, 3000).select("ul.topic-list a span").html().split("\n"))
 
@@ -36,33 +36,35 @@ class UserScannerActor(val username: String) extends Actor with EmbeddedDatabase
       fetchFavorites(s"https://eksisozluk.com/basliklar/istatistik/$username/favori-entryleri?p=$page") match {
         case Success(entryList) =>
           println(s"entry count user $username for page $page is ${entryList.length}")
-          lazy val userNode = findUser(username) getOrElse createUser(username)
-          var next = false
           withTx {
-            for ( entry <- entryList if !entry.isEmpty && !isFavoritedBefore(username, entry) ) {
+            lazy val userNode = findUser(username) getOrElse createUser(username)
+            var marked = false
+            for (entry <- entryList if !entry.isEmpty && !isFavoritedBefore(userNode, entry)) {
               markFavorited(userNode, entry)
               self ! FetchEntryInfo(entry)
-              next = true
+              marked = true
             }
+            if (marked)
+              self ! ScanPage(page + 1)
           }
-          if (next)
-            self ! ScanPage(page + 1)
+
         case Failure(e) => print(s"failed ${e.getMessage}")
       }
-    case FetchEntryInfo(entryId) => findEntry(entryId) match {
-      case Some(node) => withTx {
-        fetchEntryInfo(s"https://eksisozluk.com/entry/${entryId.substring(1)}") match {
-          case Success(entryInfo) =>
-            findUser(entryInfo.author) match {
-              case Some(userNode) =>
-                userNode.createRelationshipTo(node, RelTypes.AUTHORED)
-              case None => val userNode = createUser(entryInfo.author)
-                userNode.createRelationshipTo(node, RelTypes.AUTHORED)
-            }
+    case FetchEntryInfo(entryId) => {
+      println(s"fetching entry $entryId")
+      withTx {
+        findEntry(entryId) match {
+          case Some(node) => fetchEntryInfo(s"https://eksisozluk.com/entry/${entryId.substring(1)}") match {
+            case Success(entryInfo) =>
+              findUser(entryInfo.author) match {
+                case Some(userNode) =>
+                  userNode.createRelationshipTo(node, RelTypes.AUTHORED)
+                case None => val userNode = createUser(entryInfo.author)
+                  userNode.createRelationshipTo(node, RelTypes.AUTHORED)
+              }
+          }
+          case None => println(s"entry $entryId not found")
         }
-      }
-      case None => {
-        println(s"entry $entryId not found")
       }
     }
   }

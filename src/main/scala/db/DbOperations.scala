@@ -1,6 +1,6 @@
 package db
 
-import org.neo4j.graphdb.Node
+import org.neo4j.graphdb.{Relationship, Node}
 
 import scala.collection.JavaConversions._
 import scala.util.{Success, Try}
@@ -15,36 +15,33 @@ trait DbOperations { self: EmbeddedDatabaseService =>
     node
   }
 
-  def isFavoritedBefore(username: String, entryId: String): Boolean = findEntry(entryId) match  {
-    case Some(entry) =>
-      val relationships = entry.getRelationships(RelTypes.FAVORITED).toList
-      for(relationship <- relationships) {
-        Try(relationship.getEndNode.getProperty("username")) match {
-          case Success(value) if value == username => return true
-        }
+  def isFavoritedBefore(userNode: Node, entryId: String): Boolean = {
+    println(s"checking favorited by ${userNode.getProperty("username")} id $entryId")
+    findEntry(entryId) match {
+      case Some(entry) =>
+        println(s"$entryId is favorited before")
+        val relationships = entry.getRelationships(RelTypes.FAVORITED).toList
+        relationships.exists(r => r.getEndNode ==  userNode)
+      case None => {
+        println(s"$entryId is not favorited before")
+        false
       }
-      false
-    case None => false
+    }
   }
 
   def markFavorited(user: Node, entryId: String) = {
-    val entryNode = createEntryNode(entryId)
+    println(s"searching entry node id $entryId")
+    val entryNode = findEntry(entryId) getOrElse createEntryNode(entryId)
     user.createRelationshipTo(entryNode, RelTypes.FAVORITED)
     println(s"${user.getProperty("username")} favorited $entryId")
   }
 
-  def findEntry(entryId: String): Option[Node] = {
-    try {
-      Option(db.ds.findNode(Labels.ENTRY, "id", entryId))
-    } catch {
-      case e: Exception => None
-    }
-  }
+  def findEntry(entryId: String): Option[Node] = Option(database.findNode(Labels.ENTRY, "eid", entryId))
 
   def createEntryNode(entryId: String): Node = {
     println(s"creating entry node $entryId")
     val entryNode: Node = database.createNode(Labels.ENTRY)
-    entryNode.setProperty("id", entryId)
+    entryNode.setProperty("eid", entryId)
     entryNode
   }
 

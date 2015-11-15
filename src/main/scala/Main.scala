@@ -1,8 +1,10 @@
+import java.util.function.Consumer
+
 import actors.UserScannerActor
 import actors.UserScannerActor.ScanPage
 import akka.actor.ActorSystem
 import db.{Labels, RelTypes, DbOperations, EmbeddedDatabaseService}
-import org.neo4j.graphdb.Relationship
+import org.neo4j.graphdb.{Node, Relationship}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -48,6 +50,13 @@ object Main extends App with EmbeddedDatabaseService with DbOperations {
 //  }
 
 //  db.shutdown()
+  import db.ds
+
+  withTx {
+    database.findNodes(Labels.ENTRY).forEachRemaining( new Consumer[Node] {
+      override def accept(t: Node): Unit = println(s" before ${t.getId}")
+    })
+  }
 
   lazy val system = ActorSystem("main")
   import system.dispatcher
@@ -60,6 +69,14 @@ object Main extends App with EmbeddedDatabaseService with DbOperations {
   })
 
   io.StdIn.readLine()
+
+  withTx {
+    database.findNodes(Labels.ENTRY).forEachRemaining( new Consumer[Node] {
+      override def accept(t: Node): Unit = {
+        println(s"after ${t.getId} - ${t.getAllProperties}")
+      }
+    })
+  }
   println("shutting down system")
   Await.ready(system.terminate(), Duration.Inf)
 //  println("shutting down db")
