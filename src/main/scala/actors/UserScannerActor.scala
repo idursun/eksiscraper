@@ -2,69 +2,67 @@ package actors
 
 import java.net.URL
 
-import actors.UserScannerActor.ScanUser
+import actors.UserScannerActor.{EntryInfo, FetchEntryInfo, ScanPage}
 import akka.actor.{Actor, ActorLogging, Props}
-import akka.routing.RoundRobinPool
-import db.{DbOperations, EmbeddedDatabaseService}
+import db.{DbOperations, EmbeddedDatabaseService, RelTypes}
 import org.jsoup.Jsoup
-import org.neo4j.graphdb.Node
 
 import scala.util.{Failure, Success, Try}
 
-sealed trait Command
-
-case object Initialize extends Command
-
 object UserScannerActor {
 
-  case class ScanUser(username: String, page: Int = 1) extends Command
+  case class ScanPage(page: Int = 1)
 
-  case class FetchUrl(url: URL, selector: String) extends Command
+  case class FetchEntryInfo(entryId: String)
 
   case class EntryList(data: Array[String])
 
-  def props: Props = Props(new UserScannerActor)
+  case class EntryInfo(author: String)
 
-  def fetchUrl(url: URL): Try[EntryList] = Try(new EntryList(Jsoup.parse(url, 3000).select("ul.topic-list a span").html().split("\n")))
-
+  def props(username: String): Props = Props(new UserScannerActor(username))
 }
 
-class UserScannerActor extends Actor with EmbeddedDatabaseService with DbOperations with ActorLogging {
+class UserScannerActor(val username: String) extends Actor with EmbeddedDatabaseService with DbOperations with ActorLogging {
 
   import utils.UrlConverters._
+  import db.ds
 
-  val entryWorkers = context.actorOf(EntryWorkerActor.props.withRouter(RoundRobinPool(5)))
+  def fetchFavorites(url: URL): Try[Array[String]] = Try(Jsoup.parse(url, 3000).select("ul.topic-list a span").html().split("\n"))
+
+  def fetchEntryInfo(url: URL): Try[EntryInfo] = Try(EntryInfo(Jsoup.parse(url, 3000).select("ul#entry-list li").attr("data-author").trim))
 
   override def receive: Receive = {
-    case ScanUser(username, page: Int) => {
-      UserScannerActor.fetchUrl(s"https://eksisozluk.com/basliklar/istatistik/${username}/favori-entryleri?p=${page}") match {
-
+    case ScanPage(page: Int) =>
+      fetchFavorites(s"https://eksisozluk.com/basliklar/istatistik/$username/favori-entryleri?p=$page") match {
         case Success(entryList) =>
-          println(s"entry count user ${username} for ${page} is ${entryList.data.length}")
-          def processEntries(user: Node, items: Array[String]): Boolean = {
-            for (entryId <- items) {
-              if (!markFavorited(user, entryId)) {
-                return false
-              }
-              println(s"${username} favorited ${entryId}")
-            }
-            entryList.data.length > 1
-          }
-
-          var processed: Boolean = false
+          println(s"entry count user $username for page $page is ${entryList.length}")
+          lazy val userNode = findUser(username) getOrElse createUser(username)
+          var next = false
           withTx {
-            val user: Node = findUser(username)
-            processed = processEntries(user, entryList.data)
+            for ( entry <- entryList.take(1) if !entry.isEmpty && !isFavoritedBefore(username, entry) ) {
+              markFavorited(userNode, entry)
+              next = true
+            }
           }
-
-          if (processed)
-            self ! ScanUser(username, page+1)
-
+          if (next)
+            self ! ScanPage(page + 1)
         case Failure(e) => print(s"failed ${e.getMessage}")
       }
-
+    case FetchEntryInfo(entryId) => findEntry(entryId) match {
+      case Some(node) => withTx {
+        fetchEntryInfo(s"https://eksisozluk.com/entry/${entryId.substring(1)}") match {
+          case Success(entryInfo) =>
+            findUser(entryInfo.author) match {
+              case Some(userNode) =>
+                userNode.createRelationshipTo(node, RelTypes.AUTHORED)
+              case None => val userNode = createUser(entryInfo.author)
+                userNode.createRelationshipTo(node, RelTypes.AUTHORED)
+            }
+        }
+      }
+      case None => {
+        println(s"entry $entryId not found")
+      }
     }
-    case Initialize => print("initialized")
   }
-
 }

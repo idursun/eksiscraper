@@ -1,65 +1,70 @@
-import java.util
-
 import actors.UserScannerActor
-import actors.UserScannerActor.ScanUser
+import actors.UserScannerActor.ScanPage
 import akka.actor.ActorSystem
-import db.EmbeddedDatabaseService
+import db.{Labels, RelTypes, DbOperations, EmbeddedDatabaseService}
+import org.neo4j.graphdb.Relationship
+
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
 case class ScrapedData(data: String)
 case class EntryList(data: Array[String])
 
-object Main extends App with EmbeddedDatabaseService {
+object Main extends App with EmbeddedDatabaseService with DbOperations {
 
 //  withTx {
-//    val q = db.execute("MATCH (n: {'username': 'ssg'})")
-//    while(q.hasNext) {
-//      val next: util.Map[String, AnyRef] = q.next()
-//      println(s"next ${next}")
+//    findUser("thex") match {
+//      case Some(x) =>
+//        println("found user")
+//        val entryNode= findEntry("123") getOrElse createEntryNode("123")
+//        val relations = x.getRelationships(RelTypes.FAVORITED)
+//        import scala.collection.JavaConversions._
+//
+//        for(rel: Relationship <- relations) {
+//          if (rel.getEndNode.equals(entryNode)) {
+//            println("found relation")
+//          }
+//        }
+//
+////        x.createRelationshipTo(entryNode, RelTypes.FAVORITED)
+////        println("created relation")
+//
+//      case None => val newUser = db.createNode(Labels.USER)
+//        newUser.setProperty("username", "thex")
+//        println("created user")
 //    }
 //  }
 
-//  withTx({
-//    var node = db.findNode(Labels.USER, "username", "ssg")
-//    if (node == null) {
-//      node = db.createNode(Labels.USER)
-//      node.setProperty("username", "ssg")
+//  withTx {
+//    val user = findUser("thex").get
+//    val user2 = findUser("test1") getOrElse createUser("test1")
+//    user.createRelationshipTo(user2, RelTypes.FAVORITED)
+//    withTx {
+//      user.createRelationshipTo(createUser("test4"), RelTypes.AUTHORED)
 //    }
-//
-//    val node2: Node = db.createNode(Labels.ENTRY)
-//    node.createRelationshipTo(node2, RelTypes.FAVORITED)
-//  })
-//
-//  withTx({
-//    val ssg = findUser("ssg")
-//    val degree = ssg.getDegree(Direction.OUTGOING)
-//    val rels = ssg.getRelationships(RelTypes.FAVORITED)
-//    rels.forEach(new Consumer[Relationship] {
-//      override def accept(t: Relationship): Unit = println(t.getEndNode.getId)
-//    })
-//
-//    ssg.getLabels.forEach(new Consumer[Label] {
-//      override def accept(t: Label): Unit = print(t.name())
-//    })
-//
-//    println(rels)
-//  })
-//
+//    findUser("test4").get
+//    println("founduser test4")
+//  }
+
 //  db.shutdown()
-
-
 
   lazy val system = ActorSystem("main")
   import system.dispatcher
+  val actor = system.actorOf(UserScannerActor.props("sesshenn"))
 
-  val actor = system.actorOf(UserScannerActor.props)
+  system.scheduler.schedule(0.milliseconds, 5.minutes, actor, ScanPage(1))
 
-  system.scheduler.schedule(0.milliseconds, 5.minutes, actor, ScanUser("thex"))
+//  system.registerOnTermination({
+////    db.shutdown()
+//  })
 
-  system.registerOnTermination({
-    db.shutdown()
-  })
+  io.StdIn.readLine()
+  println("shutting down system")
+  Await.ready(system.terminate(), Duration.Inf)
+  println("shutting down db")
+  db.ds.shutdown()
 
-  system.awaitTermination()
+
+
 }
