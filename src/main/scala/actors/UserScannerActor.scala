@@ -41,7 +41,7 @@ class UserScannerActor(val username: String) extends Actor with EmbeddedDatabase
             var marked = false
             for (entry <- entryList if !entry.isEmpty && !isFavoritedBefore(userNode, entry)) {
               markFavorited(userNode, entry)
-              self ! FetchEntryInfo(entry)
+              //self ! FetchEntryInfo(entry)
               marked = true
             }
             if (marked)
@@ -50,7 +50,7 @@ class UserScannerActor(val username: String) extends Actor with EmbeddedDatabase
 
         case Failure(e) => print(s"failed ${e.getMessage}")
       }
-    case FetchEntryInfo(entryId) => {
+    case FetchEntryInfo(entryId) =>
       println(s"fetching entry $entryId")
       withTx {
         findEntry(entryId) match {
@@ -66,6 +66,5 @@ class UserScannerActor(val username: String) extends Actor with EmbeddedDatabase
           case None => println(s"entry $entryId not found")
         }
       }
-    }
   }
 }
