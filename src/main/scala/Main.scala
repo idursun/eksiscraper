@@ -1,5 +1,4 @@
 import actors.UserScannerActor
-import actors.UserScannerActor.ScanPage
 import akka.actor.ActorSystem
 import db.{DbOperations, EmbeddedDatabaseService}
 
@@ -13,10 +12,11 @@ case class EntryList(data: Array[String])
 object Main extends App with EmbeddedDatabaseService with DbOperations {
 
   lazy val system = ActorSystem("main")
-  import system.dispatcher
-  val actor = system.actorOf(UserScannerActor.props("teo"))
 
-  system.scheduler.schedule(0.milliseconds, 5.minutes, actor, ScanPage(1))
+  val seeds = List("teo", "ssg", "thex")
+  for(a <- seeds) system.actorOf(UserScannerActor.props(a))
+//  val actor = system.actorOf(UserScannerActor.props("teo"))
+
 
   system.registerOnTermination({
     database.shutdown()

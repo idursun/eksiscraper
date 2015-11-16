@@ -12,7 +12,9 @@ trait EmbeddedDatabaseService {
       action
       tx.success()
     } catch {
-      case ex:Exception => tx.failure()
+      case ex:Exception =>
+        println(s"error: ${ex.toString}")
+        tx.failure()
     } finally  {
       println("closing transaction")
       tx.close()

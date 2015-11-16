@@ -1,36 +1,31 @@
 package db
 
-import org.neo4j.graphdb.{Relationship, Node}
+import org.neo4j.graphdb.Node
 
 import scala.collection.JavaConversions._
-import scala.util.{Success, Try}
 
-trait DbOperations { self: EmbeddedDatabaseService =>
+trait DbOperations {
+  self: EmbeddedDatabaseService =>
 
   def findUser(username: String): Option[Node] = Option(database.findNode(Labels.USER, "username", username))
 
-  def createUser(username: String):Node = {
+  def createUser(username: String): Node = {
     val node = database.createNode(Labels.USER)
     node.setProperty("username", username)
     node
   }
 
   def isFavoritedBefore(userNode: Node, entryId: String): Boolean = {
-    println(s"checking favorited by ${userNode.getProperty("username")} id $entryId")
     findEntry(entryId) match {
       case Some(entry) =>
-        println(s"$entryId is favorited before")
         val relationships = entry.getRelationships(RelTypes.FAVORITED).toList
-        relationships.exists(r => r.getEndNode ==  userNode)
-      case None => {
-        println(s"$entryId is not favorited before")
+        relationships.exists(r => r.getStartNode.getId == userNode.getId)
+      case None =>
         false
-      }
     }
   }
 
   def markFavorited(user: Node, entryId: String) = {
-    println(s"searching entry node id $entryId")
     val entryNode = findEntry(entryId) getOrElse createEntryNode(entryId)
     user.createRelationshipTo(entryNode, RelTypes.FAVORITED)
     println(s"${user.getProperty("username")} favorited $entryId")

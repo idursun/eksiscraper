@@ -8,6 +8,7 @@ import db.{DbOperations, EmbeddedDatabaseService, RelTypes}
 import org.jsoup.Jsoup
 
 import scala.util.{Failure, Success, Try}
+import scala.concurrent.duration._
 
 object UserScannerActor {
 
@@ -26,10 +27,13 @@ class UserScannerActor(val username: String) extends Actor with EmbeddedDatabase
 
   import db.ds
   import utils.UrlConverters._
+  import context.dispatcher
 
   def fetchFavorites(url: URL): Try[Array[String]] = Try(Jsoup.parse(url, 3000).select("ul.topic-list a span").html().split("\n"))
 
   def fetchEntryInfo(url: URL): Try[EntryInfo] = Try(EntryInfo(Jsoup.parse(url, 3000).select("ul#entry-list li").attr("data-author").trim))
+
+  context.system.scheduler.schedule(0.milliseconds, 5.minutes, self, ScanPage(1))
 
   override def receive: Receive = {
     case ScanPage(page: Int) =>
