@@ -1,4 +1,4 @@
-import actors.UserScannerActor
+import actors.{PersistenceActor, UserScannerActor}
 import akka.actor.ActorSystem
 import db.{DbOperations, EmbeddedDatabaseService}
 
@@ -12,11 +12,10 @@ case class EntryList(data: Array[String])
 object Main extends App with EmbeddedDatabaseService with DbOperations {
 
   lazy val system = ActorSystem("main")
+  system.actorOf(PersistenceActor.props, "persistence")
 
-  val seeds = List("teo", "ssg", "thex")
-  for(a <- seeds) system.actorOf(UserScannerActor.props(a))
-//  val actor = system.actorOf(UserScannerActor.props("teo"))
-
+  val seedUsers = List("teo", "ssg", "thex", "sesshenn", "sarrus")
+  for(user <- seedUsers) system.actorOf(UserScannerActor.props(user), user)
 
   system.registerOnTermination({
     database.shutdown()

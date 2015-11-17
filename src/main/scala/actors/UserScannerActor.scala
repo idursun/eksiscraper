@@ -2,6 +2,7 @@ package actors
 
 import java.net.URL
 
+import actors.PersistenceActor.PersistFavorited
 import actors.UserScannerActor.{EntryInfo, FetchEntryInfo, ScanPage}
 import akka.actor.{Actor, ActorLogging, Props}
 import db.{DbOperations, EmbeddedDatabaseService, RelTypes}
@@ -34,22 +35,29 @@ class UserScannerActor(val username: String) extends Actor with EmbeddedDatabase
   def fetchEntryInfo(url: URL): Try[EntryInfo] = Try(EntryInfo(Jsoup.parse(url, 3000).select("ul#entry-list li").attr("data-author").trim))
 
   context.system.scheduler.schedule(0.milliseconds, 5.minutes, self, ScanPage(1))
+  val persistenceActor = context.actorSelection("akka://main/user/persistence")
 
   override def receive: Receive = {
     case ScanPage(page: Int) =>
       fetchFavorites(s"https://eksisozluk.com/basliklar/istatistik/$username/favori-entryleri?p=$page") match {
         case Success(entryList) =>
-          println(s"entry count user $username for page $page is ${entryList.length}")
-          withTx {
-            lazy val userNode = findUser(username) getOrElse createUser(username)
-            var marked = false
-            for (entry <- entryList if !entry.isEmpty && !isFavoritedBefore(userNode, entry)) {
-              markFavorited(userNode, entry)
-              //self ! FetchEntryInfo(entry)
-              marked = true
+          val nonEmpty = entryList.takeWhile(!_.isEmpty)
+          println(s"entry count user $username for page $page is ${nonEmpty.length}")
+
+          if (nonEmpty.nonEmpty) {
+            withTx {
+              lazy val userNode = findUser(username)
+              if (userNode.isDefined) {
+                val uncommitted = entryList.takeWhile(!isFavoritedBefore(userNode.get, _))
+                uncommitted.foreach(persistenceActor ! PersistFavorited(username, _))
+                if (uncommitted.length == entryList.length)
+                  self ! ScanPage(page + 1)
+              } else {
+                println(s"$username is not created")
+                nonEmpty.foreach(persistenceActor ! PersistFavorited(username, _))
+                self ! ScanPage(page + 1)
+              }
             }
-            if (marked)
-              self ! ScanPage(page + 1)
           }
 
         case Failure(e) => print(s"failed ${e.getMessage}")
