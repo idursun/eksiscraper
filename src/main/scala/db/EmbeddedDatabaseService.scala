@@ -16,7 +16,6 @@ trait EmbeddedDatabaseService {
         println(s"error: ${ex.toString}")
         tx.failure()
     } finally  {
-      println("closing transaction")
       tx.close()
     }
   }

@@ -4,6 +4,7 @@ import actors.RecommenderActor.Recommend
 import akka.actor.{Props, ActorIdentity, Identify, Actor}
 import db.{DbOperations, EmbeddedDatabaseService}
 import org.neo4j.graphdb.Node
+import scala.concurrent.duration._
 
 object RecommenderActor {
 
@@ -15,6 +16,7 @@ object RecommenderActor {
 
 class RecommenderActor extends Actor with EmbeddedDatabaseService with DbOperations {
   import db.ds
+  import context.dispatcher
 
   self ! Recommend
 
@@ -27,12 +29,12 @@ class RecommenderActor extends Actor with EmbeddedDatabaseService with DbOperati
         val selection = context.actorSelection(s"akka://main/user/$username")
         selection ! Identify(username)
       }
+      context.system.scheduler.scheduleOnce(5.minutes, self, Recommend)
     }
-    case ActorIdentity(correlationId, actorRef) => {
+    case ActorIdentity(correlationId, actorRef) =>
       if (actorRef.isEmpty) {
         println(s"scanner for ${correlationId.toString} is not found so spawning")
         context.system.actorOf(UserScannerActor.props(correlationId.toString), correlationId.toString.replace(" ", "%20"))
       }
-    }
   }
 }

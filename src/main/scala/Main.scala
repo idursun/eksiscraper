@@ -9,7 +9,7 @@ object Main extends App with EmbeddedDatabaseService with DbOperations {
 
   lazy val system = ActorSystem("main")
   system.actorOf(PersistenceActor.props, "persistence")
-//  system.actorOf(EntryInfoFetcherActor.props, "entryInfoFetcher")
+  system.actorOf(EntryInfoFetcherActor.props, "entryInfoFetcher")
 
   val seedUsers = List("teo", "ssg", "thex", "sesshenn", "sarrus")
   for (user <- seedUsers) system.actorOf(UserScannerActor.props(user), user)

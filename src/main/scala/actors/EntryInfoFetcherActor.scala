@@ -9,6 +9,7 @@ import db.{RelTypes, Labels, DbOperations, EmbeddedDatabaseService}
 import org.jsoup.Jsoup
 import org.neo4j.graphdb.Node
 import scala.util.{Success, Failure, Try}
+import scala.concurrent.duration._
 
 object EntryInfoFetcherActor {
 
@@ -28,6 +29,7 @@ class EntryInfoFetcherActor extends Actor with EmbeddedDatabaseService with DbOp
 
   import db.ds
   import utils.UrlConverters._
+  import context.dispatcher
 
   def fetchEntryInfo(url: URL): Try[EntryInfo] = Try(EntryInfo(Jsoup.parse(url, 3000).select("ul#entry-list li").attr("data-author").trim))
 
@@ -55,6 +57,6 @@ class EntryInfoFetcherActor extends Actor with EmbeddedDatabaseService with DbOp
         }
       })
     }
-    self ! DetectEntries
+    context.system.scheduler.scheduleOnce(4.minutes, self, DetectEntries)
   }
 }
