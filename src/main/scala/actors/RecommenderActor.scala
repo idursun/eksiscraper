@@ -26,7 +26,7 @@ class RecommenderActor extends Actor with EmbeddedDatabaseService with DbOperati
       while (results.hasNext) {
         val row = results.next()
         val username = row.get("u").asInstanceOf[Node].getProperty("username")
-        val selection = context.actorSelection(s"akka://main/user/$username")
+        val selection = context.actorSelection(s"akka://main/user/${username.toString.replace(" ", "%20")}")
         selection ! Identify(username)
       }
       context.system.scheduler.scheduleOnce(5.minutes, self, Recommend)
