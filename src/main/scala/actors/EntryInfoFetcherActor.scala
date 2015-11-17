@@ -34,7 +34,9 @@ class EntryInfoFetcherActor extends Actor with EmbeddedDatabaseService with DbOp
   self ! DetectEntries
 
   override def receive: Receive = {
-    case FetchEntryInfo(entryId, nodeId) => fetchEntryInfo(s"https://eksisozluk.com/entry/${entryId.substring(1)}") match {
+    case FetchEntryInfo(entryId, nodeId) =>
+      if (!entryId.isEmpty)
+      fetchEntryInfo(s"https://eksisozluk.com/entry/${entryId.substring(1)}") match {
       case Success(info) => withTx {
         val user = findUser(info.author) getOrElse createUser(info.author)
         user.createRelationshipTo(findEntry(entryId).get, RelTypes.AUTHORED)

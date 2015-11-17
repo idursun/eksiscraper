@@ -1,5 +1,4 @@
-import actors.EntryInfoFetcherActor.DetectEntries
-import actors.{EntryInfoFetcherActor, PersistenceActor, UserScannerActor}
+import actors.{EntryInfoFetcherActor, PersistenceActor, RecommenderActor, UserScannerActor}
 import akka.actor.ActorSystem
 import db.{DbOperations, EmbeddedDatabaseService}
 
@@ -10,10 +9,12 @@ object Main extends App with EmbeddedDatabaseService with DbOperations {
 
   lazy val system = ActorSystem("main")
   system.actorOf(PersistenceActor.props, "persistence")
-  system.actorOf(EntryInfoFetcherActor.props, "entryInfoFetcher")
+//  system.actorOf(EntryInfoFetcherActor.props, "entryInfoFetcher")
 
   val seedUsers = List("teo", "ssg", "thex", "sesshenn", "sarrus")
   for (user <- seedUsers) system.actorOf(UserScannerActor.props(user), user)
+
+  system.actorOf(RecommenderActor.props, "recommender")
 
   system.registerOnTermination({
     database.shutdown()

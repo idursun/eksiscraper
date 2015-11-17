@@ -29,7 +29,7 @@ class UserScannerActor(val username: String) extends Actor with EmbeddedDatabase
 
   override def receive: Receive = {
     case ScanPage(page: Int) =>
-      fetchFavorites(s"https://eksisozluk.com/basliklar/istatistik/$username/favori-entryleri?p=$page") match {
+      fetchFavorites(s"https://eksisozluk.com/basliklar/istatistik/${username.replace(" ", "%20")}/favori-entryleri?p=$page") match {
         case Success(entryList) =>
           val nonEmpty = entryList.takeWhile(!_.isEmpty)
           println(s"entry count user $username for page $page is ${nonEmpty.length}")
