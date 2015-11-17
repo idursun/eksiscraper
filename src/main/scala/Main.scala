@@ -1,21 +1,19 @@
-import actors.{PersistenceActor, UserScannerActor}
+import actors.EntryInfoFetcherActor.DetectEntries
+import actors.{EntryInfoFetcherActor, PersistenceActor, UserScannerActor}
 import akka.actor.ActorSystem
 import db.{DbOperations, EmbeddedDatabaseService}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-
-case class ScrapedData(data: String)
-case class EntryList(data: Array[String])
-
 object Main extends App with EmbeddedDatabaseService with DbOperations {
 
   lazy val system = ActorSystem("main")
   system.actorOf(PersistenceActor.props, "persistence")
+  system.actorOf(EntryInfoFetcherActor.props, "entryInfoFetcher")
 
   val seedUsers = List("teo", "ssg", "thex", "sesshenn", "sarrus")
-  for(user <- seedUsers) system.actorOf(UserScannerActor.props(user), user)
+  for (user <- seedUsers) system.actorOf(UserScannerActor.props(user), user)
 
   system.registerOnTermination({
     database.shutdown()
