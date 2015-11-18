@@ -25,8 +25,8 @@ class RecommenderActor extends Actor with EmbeddedDatabaseService with DbOperati
       val results = database.execute("match (u:USER)-[:AUTHORED]->()<-[:FAVORITED]-(k:USER) with u, count(*) as c where c > 10 return u.username,c order by c desc")
       while (results.hasNext) {
         val row = results.next()
-        val username = row.get("u").asInstanceOf[String]
-        val selection = context.actorSelection(s"akka://main/user/${username.toString.replace(" ", "%20")}")
+        val username = row.get("u.username").asInstanceOf[String]
+        val selection = context.actorSelection(s"akka://main/user/${username.replace(" ", "%20")}")
         selection ! Identify(username)
       }
       context.system.scheduler.scheduleOnce(5.minutes, self, Recommend)

@@ -13,6 +13,7 @@ trait EmbeddedDatabaseService {
       tx.success()
     } catch {
       case ex:Exception =>
+        ex.printStackTrace()
         println(s"error: ${ex.toString}")
         tx.failure()
     } finally  {
