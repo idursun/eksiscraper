@@ -24,7 +24,7 @@ class UserScannerActor(val username: String) extends Actor with EmbeddedDatabase
   import db.ds
   import utils.UrlConverters._
 
-  context.system.scheduler.schedule(0.milliseconds, 5.minutes, self, ScanPage(1))
+  context.system.scheduler.schedule(0.milliseconds, 10.minutes, self, ScanPage(1))
   val persistenceActor = context.actorSelection("akka://main/user/persistence")
 
   override def receive: Receive = {

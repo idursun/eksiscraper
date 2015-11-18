@@ -22,10 +22,10 @@ class RecommenderActor extends Actor with EmbeddedDatabaseService with DbOperati
 
   override def receive: Receive = {
     case Recommend => withTx {
-      val results = database.execute("match (u:USER)-[:AUTHORED]->()<-[:FAVORITED]-(k:USER) with u, count(*) as c where c > 10 return u,c")
+      val results = database.execute("match (u:USER)-[:AUTHORED]->()<-[:FAVORITED]-(k:USER) with u, count(*) as c where c > 10 return u.username,c order by c desc")
       while (results.hasNext) {
         val row = results.next()
-        val username = row.get("u").asInstanceOf[Node].getProperty("username")
+        val username = row.get("u").asInstanceOf[String]
         val selection = context.actorSelection(s"akka://main/user/${username.toString.replace(" ", "%20")}")
         selection ! Identify(username)
       }
