@@ -3,7 +3,6 @@ package actors
 import actors.RecommenderActor.Recommend
 import akka.actor.{Props, ActorIdentity, Identify, Actor}
 import db.{DbOperations, EmbeddedDatabaseService}
-import org.neo4j.graphdb.Node
 import scala.concurrent.duration._
 
 object RecommenderActor {
@@ -26,8 +25,10 @@ class RecommenderActor extends Actor with EmbeddedDatabaseService with DbOperati
       while (results.hasNext) {
         val row = results.next()
         val username = row.get("u.username").asInstanceOf[String]
-        val selection = context.actorSelection(s"akka://main/user/${username.replace(" ", "%20")}")
-        selection ! Identify(username)
+        if (username != "ekşisözlük") {
+          val selection = context.actorSelection(s"akka://main/user/${username.replace(" ", "%20")}")
+          selection ! Identify(username)
+        }
       }
       context.system.scheduler.scheduleOnce(5.minutes, self, Recommend)
     }
