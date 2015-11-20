@@ -4,7 +4,7 @@ import java.net.URL
 import java.util.function.Consumer
 
 import actors.EntryWorkerActor.{EntryInfo, FetchEntries, FetchEntryInfo}
-import akka.actor.{Props, Actor}
+import akka.actor.{ActorLogging, Props, Actor}
 import db.{RelTypes, Labels, DbOperations, EmbeddedDatabaseService}
 import org.jsoup.Jsoup
 import org.neo4j.graphdb.Node
@@ -25,7 +25,7 @@ object EntryWorkerActor {
 
 }
 
-class EntryWorkerActor extends Actor with EmbeddedDatabaseService with DbOperations {
+class EntryWorkerActor extends Actor with EmbeddedDatabaseService with DbOperations with ActorLogging {
 
   import db.ds
   import utils.UrlConverters._
@@ -37,7 +37,7 @@ class EntryWorkerActor extends Actor with EmbeddedDatabaseService with DbOperati
       val title: String = element.select("#title").attr("data-title").trim
       Some(EntryInfo(author, title))
     case Failure(ex) =>
-      println(ex)
+      log.error(ex, s"failed while fetching url $url")
       None
   }
 
@@ -52,7 +52,7 @@ class EntryWorkerActor extends Actor with EmbeddedDatabaseService with DbOperati
           val entryNode: Node = findEntry(entryId).get
           entryNode.setProperty("topic", info.topic)
           user.createRelationshipTo(entryNode, RelTypes.AUTHORED)
-          println(s"$entryId is authored by ${info.author}")
+          log.debug(s"$entryId is authored by ${info.author}")
         }
         case None =>
     }

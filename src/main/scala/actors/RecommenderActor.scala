@@ -1,7 +1,7 @@
 package actors
 
 import actors.RecommenderActor.Recommend
-import akka.actor.{Props, ActorIdentity, Identify, Actor}
+import akka.actor._
 import db.{DbOperations, EmbeddedDatabaseService}
 import scala.concurrent.duration._
 
@@ -13,7 +13,7 @@ object RecommenderActor {
 
 }
 
-class RecommenderActor extends Actor with EmbeddedDatabaseService with DbOperations {
+class RecommenderActor extends Actor with EmbeddedDatabaseService with DbOperations with ActorLogging {
   import db.ds
   import context.dispatcher
 
@@ -34,7 +34,7 @@ class RecommenderActor extends Actor with EmbeddedDatabaseService with DbOperati
     }
     case ActorIdentity(correlationId, actorRef) =>
       if (actorRef.isEmpty) {
-        println(s"scanner for ${correlationId.toString} is not found so spawning")
+        log.debug(s"scanner for ${correlationId.toString} is not found so spawning")
         context.system.actorOf(UserScannerActor.props(correlationId.toString), correlationId.toString.replace(" ", "%20"))
       }
   }

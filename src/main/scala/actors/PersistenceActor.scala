@@ -1,7 +1,7 @@
 package actors
 
 import actors.PersistenceActor.PersistFavorited
-import akka.actor.{Props, Actor}
+import akka.actor.{ActorLogging, Props, Actor}
 import db.{EmbeddedDatabaseService, DbOperations}
 
 object PersistenceActor {
@@ -11,7 +11,7 @@ object PersistenceActor {
   def props = Props(new PersistenceActor)
 }
 
-class PersistenceActor extends Actor with DbOperations with EmbeddedDatabaseService {
+class PersistenceActor extends Actor with DbOperations with EmbeddedDatabaseService with ActorLogging {
 
   import db.ds
 

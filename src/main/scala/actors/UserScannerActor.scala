@@ -32,7 +32,8 @@ class UserScannerActor(val username: String) extends Actor with EmbeddedDatabase
       fetchFavorites(s"https://eksisozluk.com/basliklar/istatistik/${username.replace(" ", "%20")}/favori-entryleri?p=$page") match {
         case Success(entryList) =>
           val nonEmpty = entryList.takeWhile(!_.isEmpty)
-          println(s"entry count user $username for page $page is ${nonEmpty.length}")
+          log.debug(s"entry count user $username for page $page is ${nonEmpty.length}")
+//          println(s"entry count user $username for page $page is ${nonEmpty.length}")
 
           if (nonEmpty.nonEmpty) {
             withTx {
@@ -43,13 +44,13 @@ class UserScannerActor(val username: String) extends Actor with EmbeddedDatabase
                 if (uncommitted.length == entryList.length)
                   self ! ScanPage(page + 1)
               } else {
-                println(s"$username is not created")
+                log.debug(s"$username is not created")
                 nonEmpty.foreach(persistenceActor ! PersistFavorited(username, _))
                 self ! ScanPage(page + 1)
               }
             }
           }
-        case Failure(e) => print(s"failed ${e.getMessage}")
+        case Failure(e) => log.error(s"failed ${e.getMessage}")
       }
   }
 }

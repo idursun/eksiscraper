@@ -12,6 +12,7 @@ trait DbOperations {
   def createUser(username: String): Node = {
     val node = database.createNode(Labels.USER)
     node.setProperty("username", username)
+    node.setProperty("weight", 0)
     node
   }
 
@@ -37,6 +38,7 @@ trait DbOperations {
     println(s"creating entry node $entryId")
     val entryNode: Node = database.createNode(Labels.ENTRY)
     entryNode.setProperty("eid", entryId)
+    entryNode.setProperty("p", 0)
     entryNode
   }
 
