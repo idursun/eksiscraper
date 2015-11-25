@@ -4,7 +4,7 @@ import org.neo4j.graphdb.GraphDatabaseService
 
 trait EmbeddedDatabaseService {
 
-  def database = db.ds
+  implicit def database = db.ds
 
   def withTx(action: => Unit)(implicit db: GraphDatabaseService) = {
     val tx = db.beginTx

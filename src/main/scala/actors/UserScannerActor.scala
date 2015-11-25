@@ -21,7 +21,6 @@ class UserScannerActor(val username: String) extends Actor with EmbeddedDatabase
   def fetchFavorites(url: URL): Try[Array[String]] = Try(Jsoup.parse(url, 3000).select("ul.topic-list a span").html().split("\n"))
 
   import context.dispatcher
-  import db.ds
   import utils.UrlConverters._
 
   context.system.scheduler.schedule(0.milliseconds, 10.minutes, self, ScanPage(1))
@@ -33,7 +32,6 @@ class UserScannerActor(val username: String) extends Actor with EmbeddedDatabase
         case Success(entryList) =>
           val nonEmpty = entryList.takeWhile(!_.isEmpty)
           log.debug(s"entry count user $username for page $page is ${nonEmpty.length}")
-//          println(s"entry count user $username for page $page is ${nonEmpty.length}")
 
           if (nonEmpty.nonEmpty) {
             withTx {

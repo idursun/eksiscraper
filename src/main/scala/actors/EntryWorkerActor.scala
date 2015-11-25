@@ -4,12 +4,13 @@ import java.net.URL
 import java.util.function.Consumer
 
 import actors.EntryWorkerActor.{EntryInfo, FetchEntries, FetchEntryInfo}
-import akka.actor.{ActorLogging, Props, Actor}
-import db.{RelTypes, Labels, DbOperations, EmbeddedDatabaseService}
+import akka.actor.{Actor, ActorLogging, Props}
+import db.{DbOperations, EmbeddedDatabaseService, Labels, RelTypes}
 import org.jsoup.Jsoup
 import org.neo4j.graphdb.Node
-import scala.util.{Success, Failure, Try}
+
 import scala.concurrent.duration._
+import scala.util.{Failure, Success, Try}
 
 object EntryWorkerActor {
 
@@ -27,9 +28,8 @@ object EntryWorkerActor {
 
 class EntryWorkerActor extends Actor with EmbeddedDatabaseService with DbOperations with ActorLogging {
 
-  import db.ds
-  import utils.UrlConverters._
   import context.dispatcher
+  import utils.UrlConverters._
 
   def fetchEntryInfo(url: URL): Option[EntryInfo] = Try(Jsoup.parse(url, 3000)) match {
     case Success(element) =>

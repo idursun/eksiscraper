@@ -3,6 +3,7 @@ package actors
 import actors.RecommenderActor.Recommend
 import akka.actor._
 import db.{DbOperations, EmbeddedDatabaseService}
+
 import scala.concurrent.duration._
 
 object RecommenderActor {
@@ -14,7 +15,6 @@ object RecommenderActor {
 }
 
 class RecommenderActor extends Actor with EmbeddedDatabaseService with DbOperations with ActorLogging {
-  import db.ds
   import context.dispatcher
 
   self ! Recommend

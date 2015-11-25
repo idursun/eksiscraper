@@ -26,12 +26,6 @@ trait DbOperations {
     }
   }
 
-  def markFavorited(user: Node, entryId: String) = {
-    val entryNode = findEntry(entryId) getOrElse createEntryNode(entryId)
-    user.createRelationshipTo(entryNode, RelTypes.FAVORITED)
-    println(s"${user.getProperty("username")} favorited $entryId")
-  }
-
   def findEntry(entryId: String): Option[Node] = Option(database.findNode(Labels.ENTRY, "eid", entryId))
 
   def createEntryNode(entryId: String): Node = {

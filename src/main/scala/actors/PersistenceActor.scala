@@ -1,8 +1,8 @@
 package actors
 
 import actors.PersistenceActor.PersistFavorited
-import akka.actor.{ActorLogging, Props, Actor}
-import db.{EmbeddedDatabaseService, DbOperations}
+import akka.actor.{Actor, ActorLogging, Props}
+import db.{RelTypes, DbOperations, EmbeddedDatabaseService}
 
 object PersistenceActor {
 
@@ -13,12 +13,12 @@ object PersistenceActor {
 
 class PersistenceActor extends Actor with DbOperations with EmbeddedDatabaseService with ActorLogging {
 
-  import db.ds
-
   override def receive: Receive = {
     case PersistFavorited(username, entryId) => withTx {
       val userNode = findUser(username) getOrElse createUser(username)
-      markFavorited(userNode, entryId)
+      val entryNode = findEntry(entryId) getOrElse createEntryNode(entryId)
+      userNode.createRelationshipTo(entryNode, RelTypes.FAVORITED)
+      log.debug(s"${userNode.getProperty("username")} favorited $entryId")
     }
   }
 }
