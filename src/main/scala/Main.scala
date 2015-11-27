@@ -11,7 +11,7 @@ object Main extends App with EmbeddedDatabaseService with DbOperations {
   system.actorOf(PersistenceActor.props, "persistence")
   system.actorOf(EntryWorkerActor.props, "entryWorker")
 
-  val seedUsers = List("ssg", "teo", "thex",  "jun misugi", "immanuel tolstoyevski", "fridanin parcalanmis omurgasi", "turing", "bloody amateur")
+  val seedUsers = List("lord eddard stark", "merkuryel vapur", "duc de blangis", "sana meyilim var inboxina bak", "ketender tepetopuzu")
   for (user <- seedUsers) system.actorOf(UserScannerActor.props(user), user.replace(" ", "%20"))
 
   system.actorOf(RecommenderActor.props, "recommender")
